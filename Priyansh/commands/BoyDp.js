@@ -19,7 +19,8 @@ module.exports.run = async ({ api, event }) => {
   const request = global.nodemodule["request"];
   const fs = global.nodemodule["fs-extra"];
 
-  var links = [
+  // Boy DP images list
+  const links = [
     "https://i.imgur.com/lGowut2.jpg",
     "https://i.imgur.com/4qDvuWi.jpg",
     "https://i.imgur.com/vu5yPzj.jpg",
@@ -86,16 +87,22 @@ module.exports.run = async ({ api, event }) => {
     "https://i.imgur.com/9xLfitZ.jpg",
     "https://i.imgur.com/RJ3Lou6.jpg",
     "https://i.imgur.com/dwAKjDy.jpg",
-    "https://i.imgur.com/qBlbbCX.jpg",
-    "https://i.imgur.com/lGowut2.jpg"
+    "https://i.imgur.com/qBlbbCX.jpg"
   ];
 
-  var callback = () => api.sendMessage({
-    body: "💝 𝐌𝐚𝐝𝐞 𝐛𝐲 𝐀𝐚𝐫𝐲𝐚𝐧 𝐁𝐚𝐛𝐮",
-    attachment: fs.createReadStream(__dirname + "/cache/1.jpg")
-  }, event.threadID, () => fs.unlinkSync(__dirname + "/cache/1.jpg"));
+  // Random image select
+  const imgPath = __dirname + "/cache/1.jpg";
+  const randomLink = links[Math.floor(Math.random() * links.length)];
 
-  return request(encodeURI(links[Math.floor(Math.random() * links.length)]))
-    .pipe(fs.createWriteStream(__dirname + "/cache/1.jpg"))
-    .on("close", () => callback());
+  // Download & send image
+  const callback = () => {
+    api.sendMessage({
+      body: "💝 𝐌𝐚𝐝𝐞 𝐛𝐲 𝐀𝐚𝐫𝐲𝐚𝐧 𝐁𝐚𝐛𝐮",
+      attachment: fs.createReadStream(imgPath)
+    }, event.threadID, () => fs.unlinkSync(imgPath));
+  };
+
+  request(encodeURI(randomLink))
+    .pipe(fs.createWriteStream(imgPath))
+    .on("close", callback);
 };
