@@ -1,5 +1,3 @@
-const fs = global.nodemodule["fs-extra"];
-
 module.exports.config = {
   name: "boydp",
   version: "1.0.0",
@@ -17,8 +15,11 @@ module.exports.config = {
 };
 
 module.exports.run = async ({ api, event }) => {
+  const axios = global.nodemodule["axios"];
   const request = global.nodemodule["request"];
-  const links = [
+  const fs = global.nodemodule["fs-extra"];
+
+  var links = [
     "https://i.imgur.com/lGowut2.jpg",
     "https://i.imgur.com/4qDvuWi.jpg",
     "https://i.imgur.com/vu5yPzj.jpg",
@@ -89,15 +90,12 @@ module.exports.run = async ({ api, event }) => {
     "https://i.imgur.com/lGowut2.jpg"
   ];
 
-  const path = __dirname + "/cache/1.jpg";
-  const randomLink = links[Math.floor(Math.random() * links.length)];
+  var callback = () => api.sendMessage({
+    body: "💝 𝐌𝐚𝐝𝐞 𝐛𝐲 𝐀𝐚𝐫𝐲𝐚𝐧 𝐁𝐚𝐛𝐮",
+    attachment: fs.createReadStream(__dirname + "/cache/1.jpg")
+  }, event.threadID, () => fs.unlinkSync(__dirname + "/cache/1.jpg"));
 
-  return request(encodeURI(randomLink))
-    .pipe(fs.createWriteStream(path))
-    .on("close", () => {
-      api.sendMessage({
-        body: "💝 𝐌𝐚𝐝𝐞 𝐛𝐲 𝐀𝐚𝐫𝐲𝐚𝐧 𝐁𝐚𝐛𝐮",
-        attachment: fs.createReadStream(path)
-      }, event.threadID, () => fs.unlinkSync(path));
-    });
+  return request(encodeURI(links[Math.floor(Math.random() * links.length)]))
+    .pipe(fs.createWriteStream(__dirname + "/cache/1.jpg"))
+    .on("close", () => callback());
 };
