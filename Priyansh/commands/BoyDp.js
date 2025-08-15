@@ -1,9 +1,9 @@
 module.exports.config = {
   name: "boydp",
-  version: "1.0.1",
+  version: "1.0.3",
   hasPermssion: 0,
-  credits: "PREM BABU (Edited by Aryan)",
-  description: "Send random boy DP photo",
+  credits: "PREM BABU (Edited by Aryan + Fixed by ChatGPT)",
+  description: "Send random boy DP photo with yes/no confirm (safe upload)",
   commandCategory: "Random-IMG",
   usages: "boydp",
   cooldowns: 2,
@@ -15,10 +15,37 @@ module.exports.config = {
 };
 
 module.exports.run = async ({ api, event }) => {
-  const axios = global.nodemodule["axios"];
-  const request = global.nodemodule["request"];
-  const fs = global.nodemodule["fs-extra"];
+  const prompt = "Abe Yaar Pura Command To Likh Le 😹 ckbot Yes Or Not ? (reply: yes / no)";
+  const commandName = module.exports.config.name;
 
+  api.sendMessage(prompt, event.threadID, (err, info) => {
+    if (err) return;
+    // Register handleReply so only the same user’s reply is caught
+    global.client.handleReply.push({
+      name: commandName,
+      messageID: info.messageID,
+      author: event.senderID,
+      type: "confirm"
+    });
+  }, event.messageID);
+};
+
+module.exports.handleReply = async ({ api, event, handleReply }) => {
+  // Only proceed if this reply belongs to our pending confirm and same user
+  if (handleReply.type !== "confirm" || event.senderID !== handleReply.author) return;
+
+  const fs = global.nodemodule["fs-extra"];
+  const axios = global.nodemodule["axios"];
+  const { join } = require("path");
+
+  const msg = (event.body || "").trim().toLowerCase();
+  if (msg !== "yes" && msg !== "no") return;
+
+  if (msg === "no") {
+    return api.sendMessage("Thik hai, cancel kar diya 😏", event.threadID, () => {}, handleReply.messageID);
+  }
+
+  // YES: download & send image (safe flow)
   const links = [
     "https://i.imgur.com/lGowut2.jpg",
     "https://i.imgur.com/4qDvuWi.jpg",
@@ -89,17 +116,63 @@ module.exports.run = async ({ api, event }) => {
     "https://i.imgur.com/qBlbbCX.jpg"
   ];
 
-  const imgPath = __dirname + "/cache/1.jpg";
+  // Ensure cache dir and unique file
+  const cacheDir = join(__dirname, "cache");
+  fs.ensureDirSync(cacheDir);
+  const filePath = join(cacheDir, `boydp_${Date.now()}.jpg`);
   const randomLink = links[Math.floor(Math.random() * links.length)];
 
-  const callback = () => {
-    api.sendMessage({
-      body: "💝 𝐌𝐚𝐝𝐞 𝐛𝐲 𝐀𝐚𝐫𝐲𝐚𝐧 𝐁𝐚𝐛𝐮",
-      attachment: fs.createReadStream(imgPath)
-    }, event.threadID, () => fs.unlinkSync(imgPath));
+  // Small helper to send safely
+  const safeSend = (bodyText, pathToFile) => {
+    const message = { body: bodyText };
+    if (pathToFile && fs.existsSync(pathToFile)) {
+      try {
+        message.attachment = fs.createReadStream(pathToFile);
+      } catch (e) {
+        // If stream fails, skip attachment to avoid null/undefined error
+      }
+    }
+    api.sendMessage(message, event.threadID, () => {
+      // cleanup
+      if (pathToFile && fs.existsSync(pathToFile)) {
+        try { fs.unlinkSync(pathToFile); } catch {}
+      }
+    }, handleReply.messageID);
   };
 
-  request(encodeURI(randomLink))
-    .pipe(fs.createWriteStream(imgPath))
-    .on("close", callback);
+  try {
+    // Download via axios stream
+    const response = await axios({
+      method: "GET",
+      url: encodeURI(randomLink),
+      responseType: "stream",
+      timeout: 20000
+    });
+
+    // Pipe to file and wait finish
+    await new Promise((resolve, reject) => {
+      const writer = response.data.pipe(fs.createWriteStream(filePath));
+      writer.on("finish", resolve);
+      writer.on("close", resolve);
+      writer.on("error", reject);
+      response.data.on("error", reject);
+    });
+
+    // Double check file exists & size > 0
+    let ok = false;
+    try {
+      const stat = fs.statSync(filePath);
+      ok = stat && stat.size > 0;
+    } catch {}
+    if (!ok) {
+      safeSend("File download failed, sending link instead:\n" + randomLink);
+      return;
+    }
+
+    // Send with attachment safely
+    safeSend("💝 𝐌𝐚𝐝𝐞 𝐛𝐲 𝐀𝐚𝐫𝐲𝐚𝐧 𝐁𝐚𝐛𝐮", filePath);
+  } catch (err) {
+    // On any error, avoid undefined attachment by sending text fallback
+    safeSend("Kuch gadbad ho gayi download me 😅. Yeh lo link:\n" + randomLink);
+  }
 };
