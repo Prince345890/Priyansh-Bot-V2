@@ -1,9 +1,9 @@
 module.exports.config = {
   name: "boydp",
-  version: "1.0.0",
+  version: "1.0.1",
   hasPermssion: 0,
-  credits: "PREM BABU",
-  description: "Boys Dp photos",
+  credits: "PREM BABU (Edited by Aryan)",
+  description: "Send random boy DP photo",
   commandCategory: "Random-IMG",
   usages: "boydp",
   cooldowns: 2,
@@ -19,7 +19,6 @@ module.exports.run = async ({ api, event }) => {
   const request = global.nodemodule["request"];
   const fs = global.nodemodule["fs-extra"];
 
-  // Boy DP images list
   const links = [
     "https://i.imgur.com/lGowut2.jpg",
     "https://i.imgur.com/4qDvuWi.jpg",
@@ -90,11 +89,9 @@ module.exports.run = async ({ api, event }) => {
     "https://i.imgur.com/qBlbbCX.jpg"
   ];
 
-  // Random image select
   const imgPath = __dirname + "/cache/1.jpg";
   const randomLink = links[Math.floor(Math.random() * links.length)];
 
-  // Download & send image
   const callback = () => {
     api.sendMessage({
       body: "💝 𝐌𝐚𝐝𝐞 𝐛𝐲 𝐀𝐚𝐫𝐲𝐚𝐧 𝐁𝐚𝐛𝐮",
